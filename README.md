@@ -95,7 +95,8 @@ phase come from one self-contained file per vLLM release in `src/servekit/decomp
 * **Output.** One row per phase the version has, per-pass rows under `graph_capture`, and the total.
   Phases the version does not print (for example `torch.compile` on 0.28) are named in one
   "not in this vLLM version" line instead of empty rows; `--show-na` lists them as rows.
-  `--out` writes the same as JSON, where they are `null`.
+  `--out FILE` writes the report as JSON, where absent phases are `null`; `--json` prints that JSON on stdout
+  instead of the table, so it can be piped (`servekit profile --log x.log --json | jq .phases`).
 
 To support a new release, copy the closest file in `specs/vllm/`, rename it to the exact version,
 adjust the `line` regexes, and run `pytest tests/test_decompose.py`. Each event is

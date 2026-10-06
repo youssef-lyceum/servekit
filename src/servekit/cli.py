@@ -18,7 +18,7 @@ USAGE = """usage:
   servekit launch --servekit-artifact-path PATH [--only-prepare] [--out PATH]
                   [--slices N] [--overlap] -- <command...>
   servekit profile [--out PATH] [--timeout SECONDS] -- <command...>
-  servekit profile --log FILE [--launch-time ISO] [--year YYYY] [--show-na] [--out PATH]
+  servekit profile --log FILE [--launch-time ISO] [--year YYYY] [--show-na] [--json] [--out PATH]
   servekit bench --url URL (--into PATH | --out PATH) [--wait-ready SECONDS] [...]
   servekit verify --url URL (--record PATH | --reference PATH) [--wait-ready SECONDS] [...]
 
@@ -72,10 +72,14 @@ def _profile_log(args: argparse.Namespace) -> int:
     except (ValueError, OSError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
-    print(render(report, show_na=args.show_na))
+    if args.json:
+        print(json.dumps(report, indent=2))  # stdout is the report and nothing else, so it pipes
+    else:
+        print(render(report, show_na=args.show_na))
     if args.out:
         args.out.write_text(json.dumps(report, indent=2) + "\n")
-        print(f"\nreport written to {args.out}")
+        if not args.json:
+            print(f"\nreport written to {args.out}")
     return 0 if all(c["ok"] is not False for c in report["checks"]) else 1
 
 
@@ -90,6 +94,7 @@ def _profile(argv: List[str]) -> int:
     parser.add_argument("--launch-time", default=None, help="ISO UTC time the container started; enables container_start")
     parser.add_argument("--year", type=int, default=None, help="year for vLLM's own MM-DD stamps (default: current)")
     parser.add_argument("--show-na", action="store_true", help="with --log: also list phases this vLLM version does not have")
+    parser.add_argument("--json", action="store_true", help="with --log: print the report as JSON on stdout instead of the table")
     args = parser.parse_args(options)
 
     if args.log:

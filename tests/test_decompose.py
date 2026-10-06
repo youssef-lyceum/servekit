@@ -204,3 +204,9 @@ def test_show_na_lists_the_missing_phases_as_rows():
 def test_missing_launch_time_is_a_note_not_a_missing_phase():
     text = render(decompose(H100))
     assert "container_start not measured" in text and "container_start" not in text.split("not in this vLLM version:")[-1].splitlines()[0]
+
+
+def test_cli_json_prints_only_the_report(capsys):
+    code = cli.main(["profile", "--log", str(QWEN), "--launch-time", QWEN_LAUNCH, "--json"])
+    report = json.loads(capsys.readouterr().out)  # the whole of stdout is one JSON document
+    assert code == 0 and report["spec"] == "0.18.0" and report["phases"]["weight_loading"] > 0
