@@ -71,6 +71,36 @@ Parses the engine's own log output for phase timings (no engine changes
 needed) and prints a per-phase duration table once the server is ready. 
 
 
+### `servekit profile --log`
+
+```bash
+servekit profile --log server.log [--launch-time 2026-10-05T16:18:25] [--out report.json]
+```
+
+Decomposes a *saved* engine log (vLLM) into a fixed list of phases, so runs from different vLLM
+versions line up. Phases come from `src/servekit/decompose/schema.json`; the log lines that close each
+phase come from one self-contained file per vLLM release in `src/servekit/decompose/specs/vllm/`.
+
+* **Version.** Read from the log's own banner. An exact file is used if there is one; otherwise the
+  nearest older file, and the output says "approximate". A version older than every file is refused.
+* **Timestamps.** Docker `-t` prefixes, or vLLM's own `MM-DD HH:MM:SS` stamps (`--year`, default the
+  current year; those have 1 s resolution).
+* **`--launch-time`** is optional and is not in the log. It is the UTC time the container started, for
+  example `docker inspect <container> --format '{{.State.StartedAt}}'` recorded at run time. With it,
+  `container_start` (Docker start plus imports, 41 s on an 8xH100 GLM run) is counted; without it the
+  interval starts at the first log line and `container_start` shows `n/a`.
+* **Checks.** Time between the end of `post_load` and the end of `final_warmup` must equal the engine's
+  own `init engine ... took` figure (within 0.1 s), and the exit code is 1 if it does not.
+  Spec lines that never appear in the log are listed as "events not seen", which is how a renamed line shows up.
+* **Output.** One row per phase (`n/a` when that version has no such phase), per-pass rows under
+  `graph_capture`, and the total. `--out` writes the same as JSON.
+
+To support a new release, copy the closest file in `specs/vllm/`, rename it to the exact version,
+adjust the `line` regexes, and run `pytest tests/test_decompose.py`. Each event is
+`{"line": regex, "phase": name}`; an engine that prints a phase's own duration adds
+`"took": regex-with-one-number` and `"before": phase` (the name for the time before that phase started).
+Matching lines within 5 s of each other count as one event, and events with the same phase add up.
+
 ### `servekit bench`
 
 ```bash

@@ -1,0 +1,18 @@
+{
+  "engine": "vllm",
+  "version": "0.28.1rc1.dev580+g385dce36b",
+  "events": [
+    {"line": "Resolved architecture", "phase": "config_and_arch"},
+    {"line": "Initializing a V1 LLM engine", "phase": "engine_spawn"},
+    {"line": "world_size=\\d+ rank=\\d+ local_rank=\\d+ distributed_init_method", "phase": "worker_init"},
+    {"line": "Starting to load model|Loading model from scratch", "phase": "pre_load"},
+    {"line": "Loading weights took", "phase": "weight_loading", "took": "Loading weights took ([\\d.]+) sec", "before": "pre_load"},
+    {"line": "Model loading took", "phase": "post_load"},
+    {"line": "GPU KV cache size", "phase": "kv_sizing"},
+    {"line": "[Gg]raph capturing finished in", "phase": "graph_capture", "took": "finished in ([\\d.]+) sec", "before": "profile_and_jit"},
+    {"line": "init engine \\(.*?\\) took", "phase": "final_warmup"},
+    {"line": "Starting vLLM (API )?server", "phase": "app_construction"},
+    {"line": "Application startup complete", "phase": "server_startup"},
+    {"line": "DeepGEMM warmup:\\s+100%", "phase": "deepgemm_warmup"}
+  ]
+}

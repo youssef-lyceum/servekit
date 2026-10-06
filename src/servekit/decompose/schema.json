@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "leaves": {
+    "container_start": "Container launch to the first engine log line: Docker start and Python/engine imports. Needs --launch-time.",
+    "config_and_arch": "Argument parsing, model config and architecture resolution, tokenizer and multimodal setup in the API process.",
+    "engine_spawn": "Spawning the engine core process, up to the first distributed-init line.",
+    "worker_init": "Starting the tensor-parallel workers and initializing distributed communication, up to the last rank reporting in.",
+    "pre_load": "Model construction and setup before weights start moving (empty modules, backend selection).",
+    "weight_loading": "Reading the checkpoint and placing weights in GPU memory, as reported by the engine (slowest rank).",
+    "post_load": "Work after weights are loaded and before profiling: post-processing, quantization setup, memory accounting.",
+    "compile_setup": "Preparation before the Dynamo transform (cache lookup, encoder profiling).",
+    "dynamo_transform": "TorchDynamo bytecode transform, as reported by the engine.",
+    "compile_backend": "torch.compile backend compilation after the Dynamo transform (Inductor and cache save).",
+    "initial_profile_run": "The first profiling forward pass, as reported by the engine.",
+    "profile_and_jit": "Profiling forward passes and JIT kernel compilation (Triton, TileLang) that run before or between graph captures.",
+    "kv_sizing": "Sizing and allocating the KV cache after profiling.",
+    "graph_capture": "CUDA graph capture, summed over all passes, as reported by the engine.",
+    "deepgemm_warmup": "DeepGEMM kernel warmup over all registered shapes.",
+    "final_warmup": "Remaining engine warmup between KV cache sizing and engine ready.",
+    "app_construction": "Building the HTTP application and routes after the engine is ready.",
+    "server_startup": "HTTP server startup, up to the ready line."
+  },
+  "checks": [
+    {
+      "id": "engine_init",
+      "description": "Phases from the end of from_phase to the end of to_phase must sum to the engine's own 'init engine ... took' figure.",
+      "from_phase": "post_load",
+      "to_phase": "final_warmup",
+      "reported_match": "init engine \\(.*?\\) took ([\\d.]+) s",
+      "tolerance_s": 0.1
+    }
+  ]
+}
