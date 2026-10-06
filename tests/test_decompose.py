@@ -116,6 +116,9 @@ def test_vllm_018_log_reads_took_compile_line():
     approx(p["compile_backend"], 20.16)
     approx(p["initial_profile_run"], 1.09)
     assert p["deepgemm_warmup"] is None
+    # CUDA graph memory profiling is its own phase; the KV cache itself is sized in well under a second
+    approx(p["graph_memory_profiling"], 1.66)
+    assert p["kv_sizing"] < 1.0
 
 
 def test_vllm_014_log_reads_takes_compile_line_and_colour_codes():

@@ -15,6 +15,8 @@
     {"line": "Application startup complete", "phase": "server_startup"},
     {"line": "Dynamo bytecode transform time", "phase": "dynamo_transform", "took": "transform time: ([\\d.]+) s", "before": "compile_setup"},
     {"line": "torch\\.compile took [\\d.]+ s in total", "phase": "compile_backend"},
-    {"line": "Initial profiling/warmup run took", "phase": "initial_profile_run"}
+    {"line": "Initial profiling/warmup run took", "phase": "initial_profile_run"},
+    {"line": "Profiling CUDA graph memory:", "phase": "profile_and_jit"},
+    {"line": "Estimated CUDA graph memory", "phase": "graph_memory_profiling"}
   ]
 }

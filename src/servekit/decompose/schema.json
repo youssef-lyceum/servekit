@@ -12,6 +12,7 @@
     "dynamo_transform": "TorchDynamo bytecode transform, as reported by the engine.",
     "compile_backend": "torch.compile backend compilation after the Dynamo transform (Inductor and cache save).",
     "initial_profile_run": "The first profiling forward pass, as reported by the engine.",
+    "graph_memory_profiling": "Measuring how much GPU memory CUDA graph capture will need, before the KV cache is sized (vLLM 0.18 and later), up to the engine's estimate.",
     "profile_and_jit": "Profiling forward passes and JIT kernel compilation (Triton, TileLang) that run before or between graph captures.",
     "kv_sizing": "Sizing and allocating the KV cache after profiling.",
     "graph_capture": "CUDA graph capture, summed over all passes, as reported by the engine.",
