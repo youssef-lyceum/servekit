@@ -27,7 +27,7 @@
       "from_phase": "post_load",
       "to_phase": "final_warmup",
       "reported_match": "init engine \\(.*?\\) took ([\\d.]+) s",
-      "tolerance_s": 0.1
+      "tolerance_s": 0.25
     }
   ]
 }

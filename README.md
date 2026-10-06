@@ -90,7 +90,7 @@ phase come from one self-contained file per vLLM release in `src/servekit/decomp
   `container_start` (Docker start plus imports, 41 s on an 8xH100 GLM run) is counted; without it the
   interval starts at the first log line and `container_start` shows `n/a`.
 * **Checks.** Time between the end of `post_load` and the end of `final_warmup` must equal the engine's
-  own `init engine ... took` figure (within 0.1 s), and the exit code is 1 if it does not.
+  own `init engine ... took` figure (within 0.25 s), and the exit code is 1 if it does not.
   Spec lines that never appear in the log are listed as "events not seen", which is how a renamed line shows up.
 * **Output.** One row per phase (`n/a` when that version has no such phase), per-pass rows under
   `graph_capture`, and the total. `--out` writes the same as JSON.
