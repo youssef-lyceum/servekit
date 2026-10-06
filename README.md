@@ -92,8 +92,10 @@ phase come from one self-contained file per vLLM release in `src/servekit/decomp
 * **Checks.** Time between the end of `post_load` and the end of `final_warmup` must equal the engine's
   own `init engine ... took` figure (within 0.25 s), and the exit code is 1 if it does not.
   Spec lines that never appear in the log are listed as "events not seen", which is how a renamed line shows up.
-* **Output.** One row per phase (`n/a` when that version has no such phase), per-pass rows under
-  `graph_capture`, and the total. `--out` writes the same as JSON.
+* **Output.** One row per phase the version has, per-pass rows under `graph_capture`, and the total.
+  Phases the version does not print (for example `torch.compile` on 0.28) are named in one
+  "not in this vLLM version" line instead of empty rows; `--show-na` lists them as rows.
+  `--out` writes the same as JSON, where they are `null`.
 
 To support a new release, copy the closest file in `specs/vllm/`, rename it to the exact version,
 adjust the `line` regexes, and run `pytest tests/test_decompose.py`. Each event is

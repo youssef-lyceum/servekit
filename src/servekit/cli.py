@@ -18,7 +18,7 @@ USAGE = """usage:
   servekit launch --servekit-artifact-path PATH [--only-prepare] [--out PATH]
                   [--slices N] [--overlap] -- <command...>
   servekit profile [--out PATH] [--timeout SECONDS] -- <command...>
-  servekit profile --log FILE [--launch-time ISO] [--year YYYY] [--out PATH]
+  servekit profile --log FILE [--launch-time ISO] [--year YYYY] [--show-na] [--out PATH]
   servekit bench --url URL (--into PATH | --out PATH) [--wait-ready SECONDS] [...]
   servekit verify --url URL (--record PATH | --reference PATH) [--wait-ready SECONDS] [...]
 
@@ -72,7 +72,7 @@ def _profile_log(args: argparse.Namespace) -> int:
     except (ValueError, OSError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
-    print(render(report))
+    print(render(report, show_na=args.show_na))
     if args.out:
         args.out.write_text(json.dumps(report, indent=2) + "\n")
         print(f"\nreport written to {args.out}")
@@ -89,6 +89,7 @@ def _profile(argv: List[str]) -> int:
     parser.add_argument("--log", type=Path, default=None, help="decompose this saved engine log instead of launching a command")
     parser.add_argument("--launch-time", default=None, help="ISO UTC time the container started; enables container_start")
     parser.add_argument("--year", type=int, default=None, help="year for vLLM's own MM-DD stamps (default: current)")
+    parser.add_argument("--show-na", action="store_true", help="with --log: also list phases this vLLM version does not have")
     args = parser.parse_args(options)
 
     if args.log:

@@ -184,3 +184,23 @@ def test_cli_log_mode_prints_table_and_writes_json(tmp_path, capsys):
 
 def test_cli_log_mode_reports_unreadable_log(tmp_path, capsys):
     assert cli.main(["profile", "--log", str(tmp_path / "missing.log")]) == 2
+
+
+# --- rendering ----------------------------------------------------------------------------------
+
+def test_table_omits_phases_the_version_lacks():
+    text = render(decompose(H100, launch_time=H100_LAUNCH))
+    rows = {line.split()[0] for line in text.splitlines() if line and line.split()[0] in SCHEMA.leaves}
+    assert "dynamo_transform" not in rows and "compile_backend" not in rows and "deepgemm_warmup" in rows
+    assert "not in this vLLM version: compile_setup, dynamo_transform, compile_backend, initial_profile_run" in text
+    assert "n/a" not in text
+
+
+def test_show_na_lists_the_missing_phases_as_rows():
+    text = render(decompose(H100, launch_time=H100_LAUNCH), show_na=True)
+    assert "dynamo_transform" in text and "n/a" in text and "not in this vLLM version" not in text
+
+
+def test_missing_launch_time_is_a_note_not_a_missing_phase():
+    text = render(decompose(H100))
+    assert "container_start not measured" in text and "container_start" not in text.split("not in this vLLM version:")[-1].splitlines()[0]

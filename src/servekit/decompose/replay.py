@@ -151,21 +151,30 @@ def _check(check: dict, observed, lines, start: float) -> Dict:
     return result
 
 
-def render(report: Dict, schema: Optional[Schema] = None) -> str:
+def render(report: Dict, schema: Optional[Schema] = None, show_na: bool = False) -> str:
+    """Table of the phases this version has. Phases it does not print are named in one line unless show_na."""
     schema = schema or load_schema()
     width = max(len(k) for k in schema.leaves)
     approx = "  (approximate: no spec for this exact version)" if report["spec_approximate"] else ""
+    phases = report["phases"]
     out = [f"{report['engine']} {report['version']}  spec={report['spec']}{approx}  interval starts at: {report['interval_start']}",
            f"{'phase':<{width}}  {'seconds':>9}", "-" * (width + 11)]
     detail: Dict[str, List[str]] = {}
     for p in report["timeline"]:
         if p["detail"]:
             detail.setdefault(p["phase"], []).append(f"{p['detail']}: {p['duration_s']:.2f}")
-    for leaf, secs in report["phases"].items():
-        out.append(f"{leaf:<{width}}  {'n/a' if secs is None else format(secs, '9.2f'):>9}")
+    for leaf, secs in phases.items():
+        if secs is None:
+            if show_na:
+                out.append(f"{leaf:<{width}}  {'n/a':>9}")
+            continue
+        out.append(f"{leaf:<{width}}  {secs:9.2f}")
         for d in detail.get(leaf, []):
             out.append(f"{'':<{width}}    {d}")
     out += ["-" * (width + 11), f"{'total':<{width}}  {report['total_s']:>9.2f}"]
+    absent = [leaf for leaf, secs in phases.items() if secs is None and leaf != "container_start"]
+    if absent and not show_na:
+        out.append("not in this vLLM version: " + ", ".join(absent))
     out += [f"note: {n}" for n in report["notes"]]
     if report["events_not_seen"]:
         out.append("events not seen: " + "; ".join(report["events_not_seen"]))
