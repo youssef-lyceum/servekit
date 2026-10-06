@@ -95,6 +95,8 @@ phase come from one self-contained file per vLLM release in `src/servekit/decomp
 * **Output.** One row per phase the version has, per-pass rows under `graph_capture`, and the total.
   Phases the version does not print (for example `torch.compile` on 0.28) are named in one
   "not in this vLLM version" line instead of empty rows; `--show-na` lists them as rows.
+  The report also records the vLLM version, `world_size` (from the distributed-init lines) and
+  `tensor_parallel_size` (from vLLM's non-default-arguments line; 1 when the world size is 1; unknown otherwise).
   `--out FILE` writes the report as JSON, where absent phases are `null`; `--json` prints that JSON on stdout
   instead of the table, so it can be piped (`servekit profile --log x.log --json | jq .phases`).
 

@@ -213,3 +213,14 @@ def test_cli_json_prints_only_the_report(capsys):
     code = cli.main(["profile", "--log", str(QWEN), "--launch-time", QWEN_LAUNCH, "--json"])
     report = json.loads(capsys.readouterr().out)  # the whole of stdout is one JSON document
     assert code == 0 and report["spec"] == "0.18.0" and report["phases"]["weight_loading"] > 0
+
+
+def test_report_records_world_size_and_tensor_parallel_size(tmp_path):
+    h100 = decompose(H100)
+    assert (h100["world_size"], h100["tensor_parallel_size"]) == (8, 8)
+    qwen = decompose(QWEN)  # single GPU: vLLM prints no tensor_parallel_size, so 1 is inferred from the world size
+    assert (qwen["world_size"], qwen["tensor_parallel_size"]) == (1, 1)
+    # more than one GPU and no tensor_parallel_size line could be pipeline or data parallelism: unknown, not guessed
+    log = tmp_path / "server.log"
+    log.write_text("".join(l for l in H100.read_text().splitlines(keepends=True) if "'tensor_parallel_size'" not in l))
+    assert (decompose(log)["world_size"], decompose(log)["tensor_parallel_size"]) == (8, None)

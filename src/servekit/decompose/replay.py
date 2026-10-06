@@ -13,6 +13,8 @@ DOCKER_STAMP = re.compile(r"^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?)Z ")
 VLLM_STAMP = re.compile(r"\b(\d\d)-(\d\d) (\d\d):(\d\d):(\d\d)\b")
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
 BANNER = re.compile(r"version (\d+\.\d+\.\d+[0-9A-Za-z.+_-]*)")
+WORLD_SIZE = re.compile(r"\bworld_size=(\d+)")
+TENSOR_PARALLEL = re.compile(r"'tensor_parallel_size': (\d+)")  # vLLM prints only non-default launch arguments
 CLUSTER_GAP_S = 5.0
 READY_PHASE = "server_startup"
 
@@ -54,6 +56,18 @@ def find_version(lines: List[Tuple[float, str]]) -> str:
         if m:
             return m.group(1)
     raise ValueError("no vLLM version banner in the first 400 lines; pass the version explicitly")
+
+
+def find_parallelism(lines: List[Tuple[float, str]]) -> Dict[str, Optional[int]]:
+    """World size from the distributed-init lines; tensor parallel size from the non-default arguments line.
+    vLLM omits arguments left at their default, so with a world size of 1 an absent value means 1. With more GPUs and
+    no value it could be pipeline or data parallelism, so it stays unknown."""
+    sizes = [int(m.group(1)) for _, text in lines if (m := WORLD_SIZE.search(text))]
+    world = max(sizes) if sizes else None
+    tp = next((int(m.group(1)) for _, text in lines if (m := TENSOR_PARALLEL.search(text))), None)
+    if tp is None and world == 1:
+        tp = 1
+    return {"world_size": world, "tensor_parallel_size": tp}
 
 
 def _clusters(hits: List[Tuple[float, str]]) -> List[List[Tuple[float, str]]]:
@@ -131,7 +145,8 @@ def decompose(log: Path, launch_time: Optional[str] = None, year: Optional[int] 
 
     checks = [_check(c, observed, lines, start) for c in schema.checks]
     return dict(
-        log=str(log), engine=spec.engine, version=version, spec=spec.version, spec_approximate=approximate,
+        log=str(log), engine=spec.engine, version=version, **find_parallelism(lines),
+        spec=spec.version, spec_approximate=approximate,
         interval_start=interval_start, total_s=round(end - start, 2), phases=phases, timeline=timeline,
         events_not_seen=not_seen, checks=checks, notes=notes)
 
