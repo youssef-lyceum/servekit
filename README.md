@@ -77,34 +77,24 @@ needed) and prints a per-phase duration table once the server is ready.
 servekit profile --log server.log [--launch-time 2026-10-05T16:18:25] [--out report.json]
 ```
 
-Decomposes a *saved* engine log (vLLM) into a fixed list of phases, so runs from different vLLM
-versions line up. Phases come from `src/servekit/decompose/schema.json`; the log lines that close each
-phase come from one self-contained file per vLLM release in `src/servekit/decompose/specs/vllm/`.
+Profiles a saved vLLM log with the same parser, phase rules, table, and JSON
+report used by live `servekit profile`. Docker `-t` timestamps and vLLM's own
+`MM-DD HH:MM:SS` timestamps are accepted. With `--launch-time`, `process_startup`
+includes the time from container launch to the first log line; without it, the
+profile starts at the first log line. `--out` writes the usual Servekit JSON
+report, including the vLLM version and the pattern version used. Yearless vLLM
+timestamps use the current year unless `--launch-time` supplies one; elapsed
+durations do not depend on that choice.
 
-* **Version.** Read from the log's own banner. An exact file is used if there is one; otherwise the
-  nearest older file, and the output says "approximate". A version older than every file is refused.
-* **Timestamps.** Docker `-t` prefixes, or vLLM's own `MM-DD HH:MM:SS` stamps (`--year`, default the
-  current year; those have 1 s resolution).
-* **`--launch-time`** is optional and is not in the log. It is the UTC time the container started, for
-  example `docker inspect <container> --format '{{.State.StartedAt}}'` recorded at run time. With it,
-  `container_start` (Docker start plus imports, 41 s on an 8xH100 GLM run) is counted; without it the
-  interval starts at the first log line and `container_start` shows `n/a`.
-* **Checks.** Time between the end of `post_load` and the end of `final_warmup` must equal the engine's
-  own `init engine ... took` figure (within 0.25 s), and the exit code is 1 if it does not.
-  Spec lines that never appear in the log are listed as "events not seen", which is how a renamed line shows up.
-* **Output.** One row per phase the version has, per-pass rows under `graph_capture`, and the total.
-  Phases the version does not print (for example `torch.compile` on 0.28) are named in one
-  "not in this vLLM version" line instead of empty rows; `--show-na` lists them as rows.
-  The report also records the vLLM version, `world_size` (from the distributed-init lines) and
-  `tensor_parallel_size` (from vLLM's non-default-arguments line; 1 when the world size is 1; unknown otherwise).
-  `--out FILE` writes the report as JSON, where absent phases are `null`; `--json` prints that JSON on stdout
-  instead of the table, so it can be piped (`servekit profile --log x.log --json | jq .phases`).
-
-To support a new release, copy the closest file in `specs/vllm/`, rename it to the exact version,
-adjust the `line` regexes, and run `pytest tests/test_decompose.py`. Each event is
-`{"line": regex, "phase": name}`; an engine that prints a phase's own duration adds
-`"took": regex-with-one-number` and `"before": phase` (the name for the time before that phase started).
-Matching lines within 5 s of each other count as one event, and events with the same phase add up.
+Patterns for each vLLM version live in `src/servekit/profile_specs/vllm/`.
+Servekit reads the version from the log, uses its exact file when present, or
+uses the newest older file with a warning. A version older than every file is
+refused. To add a version, copy the closest file and adjust its event regexes.
+Each event has a `line` regex and a `phase` name. Events with an engine-reported
+duration also have `took`, a regex capturing that duration, and can have
+`before`, the name for the preceding gap. Unidentified gaps remain `unknown`,
+as in live profiling. Separate passes of a phase can be listed in
+`repeatable_phases`; worker reports within a pass use the largest duration.
 
 ### `servekit bench`
 

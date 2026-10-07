@@ -18,7 +18,7 @@ USAGE = """usage:
   servekit launch --servekit-artifact-path PATH [--only-prepare] [--out PATH]
                   [--slices N] [--overlap] -- <command...>
   servekit profile [--out PATH] [--timeout SECONDS] -- <command...>
-  servekit profile --log FILE [--launch-time ISO] [--year YYYY] [--show-na] [--json] [--out PATH]
+  servekit profile --log FILE [--launch-time ISO] [--out PATH]
   servekit bench --url URL (--into PATH | --out PATH) [--wait-ready SECONDS] [...]
   servekit verify --url URL (--record PATH | --reference PATH) [--wait-ready SECONDS] [...]
 
@@ -65,36 +65,33 @@ def _split_command(rest: List[str]) -> Tuple[List[str], List[str]]:
 
 
 def _profile_log(args: argparse.Namespace) -> int:
-    from .decompose.replay import decompose, render
+    from .log_profile import profile_log
 
     try:
-        report = decompose(args.log, launch_time=args.launch_time, year=args.year)
+        report, approximate = profile_log(args.log, launch_time=args.launch_time)
+        report.command = f"servekit profile --log {args.log}"
+        if args.out:
+            save_json(report, args.out)
     except (ValueError, OSError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
-    if args.json:
-        print(json.dumps(report, indent=2))  # stdout is the report and nothing else, so it pipes
-    else:
-        print(render(report, show_na=args.show_na))
+    if approximate:
+        print(f"warning: no patterns for vLLM {report.framework_version}; using {report.pattern_version}", file=sys.stderr)
+    print(render_table(report))
     if args.out:
-        args.out.write_text(json.dumps(report, indent=2) + "\n")
-        if not args.json:
-            print(f"\nreport written to {args.out}")
-    return 0 if all(c["ok"] is not False for c in report["checks"]) else 1
+        print(f"\nreport written to {args.out}")
+    return 0
 
 
 def _profile(argv: List[str]) -> int:
-    # `--log FILE` decomposes a saved log and has no engine command after `--`.
+    # `--log FILE` profiles a saved log and has no engine command after `--`.
     options, command = (argv, []) if "--log" in argv and "--" not in argv else _split_command(argv)
 
     parser = argparse.ArgumentParser(prog="servekit profile")
     parser.add_argument("--out", type=Path, default=None)
     parser.add_argument("--timeout", type=float, default=1800.0, help="seconds to wait for the ready signal")
-    parser.add_argument("--log", type=Path, default=None, help="decompose this saved engine log instead of launching a command")
-    parser.add_argument("--launch-time", default=None, help="ISO UTC time the container started; enables container_start")
-    parser.add_argument("--year", type=int, default=None, help="year for vLLM's own MM-DD stamps (default: current)")
-    parser.add_argument("--show-na", action="store_true", help="with --log: also list phases this vLLM version does not have")
-    parser.add_argument("--json", action="store_true", help="with --log: print the report as JSON on stdout instead of the table")
+    parser.add_argument("--log", type=Path, default=None, help="profile a saved vLLM log instead of launching a command")
+    parser.add_argument("--launch-time", default=None, help="ISO UTC container start time; includes time before the first log line")
     args = parser.parse_args(options)
 
     if args.log:
